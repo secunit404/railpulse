@@ -1,0 +1,163 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/**
+ * MODULAR COLOR SYSTEM
+ *
+ * This file uses a two-layer color system for maximum flexibility:
+ *
+ * 1. COLOR PALETTES: Raw color definitions from Tailwind's official gray scale
+ *
+ * 2. SEMANTIC TOKENS: Functional color mappings
+ *    - primary-*   → Action colors (buttons, links, focus states)
+ *    - neutral-*   → Text, borders, light backgrounds
+ *    - surface-*   → Cards, modals, dark backgrounds
+ *
+ * HOW TO CHANGE YOUR COLOR SCHEME:
+ *
+ * Option 1 - Switch to a different palette:
+ *   Change the semantic token mappings (lines below). For example:
+ *   --color-primary-500: var(--color-blue-500);  ← Use Tailwind blue instead
+ *   --color-neutral-500: var(--color-slate-500); ← Use Tailwind slate instead
+ *
+ * Option 2 - Add new colors:
+ *   Add new palette definitions and map them to semantic tokens
+ *
+ */
+
+@theme {
+  /* ==================== COLOR PALETTES ==================== */
+
+  /* Primary action colors (buttons, links, focused states) */
+  --color-primary-50: var(--color-gray-50);
+  --color-primary-100: var(--color-gray-100);
+  --color-primary-200: var(--color-gray-200);
+  --color-primary-300: var(--color-gray-300);
+  --color-primary-400: var(--color-gray-400);
+  --color-primary-500: var(--color-gray-500);
+  --color-primary-600: var(--color-gray-600);
+  --color-primary-700: var(--color-gray-700);
+  --color-primary-800: var(--color-gray-800);
+  --color-primary-900: var(--color-gray-900);
+  --color-primary-950: var(--color-gray-950);
+
+  /* Neutral colors (text, borders, backgrounds) */
+  --color-neutral-50: var(--color-gray-50);
+  --color-neutral-100: var(--color-gray-100);
+  --color-neutral-200: var(--color-gray-200);
+  --color-neutral-300: var(--color-gray-300);
+  --color-neutral-400: var(--color-gray-400);
+  --color-neutral-500: var(--color-gray-500);
+  --color-neutral-600: var(--color-gray-600);
+  --color-neutral-700: var(--color-gray-700);
+  --color-neutral-800: var(--color-gray-800);
+  --color-neutral-900: var(--color-gray-900);
+  --color-neutral-950: var(--color-gray-950);
+
+  /* Surface colors (cards, modals, elevated UI) */
+  --color-surface-50: var(--color-gray-50);
+  --color-surface-100: var(--color-gray-100);
+  --color-surface-200: var(--color-gray-200);
+  --color-surface-300: var(--color-gray-300);
+  --color-surface-400: var(--color-gray-400);
+  --color-surface-500: var(--color-gray-500);
+  --color-surface-600: var(--color-gray-600);
+  --color-surface-700: var(--color-gray-700);
+  --color-surface-800: var(--color-gray-800);
+  --color-surface-900: var(--color-gray-900);
+  --color-surface-950: var(--color-gray-950);
+
+  /* Status colors (success/info/warning/error) */
+  --color-success-50: var(--color-emerald-50);
+  --color-success-100: var(--color-emerald-100);
+  --color-success-200: var(--color-emerald-200);
+  --color-success-300: var(--color-emerald-300);
+  --color-success-400: var(--color-emerald-400);
+  --color-success-500: var(--color-emerald-500);
+  --color-success-600: var(--color-emerald-600);
+  --color-success-700: var(--color-emerald-700);
+  --color-success-800: var(--color-emerald-800);
+  --color-success-900: var(--color-emerald-900);
+
+  --color-info-50: var(--color-sky-50);
+  --color-info-100: var(--color-sky-100);
+  --color-info-200: var(--color-sky-200);
+  --color-info-300: var(--color-sky-300);
+  --color-info-400: var(--color-sky-400);
+  --color-info-500: var(--color-sky-500);
+  --color-info-600: var(--color-sky-600);
+  --color-info-700: var(--color-sky-700);
+  --color-info-800: var(--color-sky-800);
+  --color-info-900: var(--color-sky-900);
+
+  --color-warning-50: var(--color-amber-50);
+  --color-warning-100: var(--color-amber-100);
+  --color-warning-200: var(--color-amber-200);
+  --color-warning-300: var(--color-amber-300);
+  --color-warning-400: var(--color-amber-400);
+  --color-warning-500: var(--color-amber-500);
+  --color-warning-600: var(--color-amber-600);
+  --color-warning-700: var(--color-amber-700);
+  --color-warning-800: var(--color-amber-800);
+  --color-warning-900: var(--color-amber-900);
+
+  --color-danger-50: var(--color-rose-50);
+  --color-danger-100: var(--color-rose-100);
+  --color-danger-200: var(--color-rose-200);
+  --color-danger-300: var(--color-rose-300);
+  --color-danger-400: var(--color-rose-400);
+  --color-danger-500: var(--color-rose-500);
+  --color-danger-600: var(--color-rose-600);
+  --color-danger-700: var(--color-rose-700);
+  --color-danger-800: var(--color-rose-800);
+  --color-danger-900: var(--color-rose-900);
+}
+
+@layer base {
+  body {
+    @apply bg-linear-to-br from-neutral-50 to-neutral-100 dark:from-surface-900 dark:to-surface-800 text-surface-900 dark:text-neutral-50 antialiased;
+  }
+
+.dark {
+  --color-primary-400: var(--color-gray-500);
+  --color-primary-500: var(--color-gray-600);
+  --color-primary-600: var(--color-gray-700);
+  --color-primary-700: var(--color-gray-800);
+  --color-primary-800: var(--color-gray-900);
+}
+}
+
+@layer utilities {
+  /* Custom button styles */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-primary-500/90 hover:bg-primary-500 text-white font-semibold py-2 px-4 rounded-lg shadow-sm shadow-black/10 dark:shadow-black/40 transition-transform duration-200 cursor-pointer;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 bg-white/80 hover:bg-white text-surface-900 dark:bg-surface-800 dark:hover:bg-surface-700 dark:text-neutral-100 border border-neutral-200/70 dark:border-surface-600/70 shadow-sm shadow-black/5 dark:shadow-black/30 font-medium py-2 px-4 rounded-lg transition-transform duration-200 cursor-pointer;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white dark:bg-surface-800 rounded-xl shadow-lg border border-neutral-200 dark:border-surface-700 p-6;
+  }
+
+  .card-hover {
+    @apply bg-white dark:bg-surface-800 rounded-xl shadow-lg border border-neutral-200 dark:border-surface-700 p-6 hover:shadow-xl transition-shadow duration-200;
+  }
+
+  /* Input styles */
+  .input {
+    @apply w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
+  }
+
+  /* Label styles */
+  .label {
+    @apply block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2;
+  }
+
+  /* Glass morphism effect */
+  .glass {
+    @apply bg-white/80 dark:bg-surface-800/80 backdrop-blur-lg border border-white/20 dark:border-surface-700/50;
+  }
+}
