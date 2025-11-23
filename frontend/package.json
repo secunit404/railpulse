@@ -1,0 +1,28 @@
+{
+  "name": "railpulse-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@headlessui/vue": "^1.7.23",
+    "@heroicons/vue": "^2.2.0",
+    "axios": "^1.6.2",
+    "dayjs": "^1.11.10",
+    "pinia": "^2.1.7",
+    "socket.io-client": "^4.6.0",
+    "vue": "^3.3.11",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.3.3",
+    "vite": "^7.2.2",
+    "vue-tsc": "^3.1.4"
+  }
+}

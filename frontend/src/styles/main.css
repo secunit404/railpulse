@@ -143,12 +143,12 @@
   }
 
   .card-hover {
-    @apply bg-white dark:bg-surface-800 rounded-xl shadow-lg border border-neutral-200 dark:border-surface-700 p-6 hover:shadow-xl transition-shadow duration-200;
+    @apply bg-white dark:bg-surface-800 rounded-xl shadow-lg border border-neutral-200 dark:border-surface-700 p-4 hover:shadow-xl transition-shadow duration-200;
   }
 
   /* Input styles */
   .input {
-    @apply w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
+    @apply w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
   }
 
   /* Label styles */

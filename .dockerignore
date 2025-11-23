@@ -1,0 +1,30 @@
+# Version control
+.git
+.gitignore
+.vscode
+.idea
+
+# Environment and logs
+*.env
+.env*
+*.log
+logs
+
+# Test coverage
+coverage
+
+# Node modules (installed during build)
+node_modules
+backend/node_modules
+frontend/node_modules
+shared/node_modules
+
+# Build artifacts (generated during build)
+dist
+build
+backend/dist
+frontend/dist
+
+# Data directory (mounted as volume)
+data
+backend/data

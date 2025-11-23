@@ -141,9 +141,6 @@
                       </transition>
                     </div>
                   </Combobox>
-                  <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                    Required: Select the final destination to monitor a specific route (e.g., Göteborg C → Älvängen)
-                  </p>
                 </div>
 
                 <!-- Run Mode -->
@@ -155,7 +152,7 @@
                         type="radio"
                         v-model="form.runMode"
                         value="daily"
-                        class="w-4 h-4 text-amber-500 focus:ring-amber-300"
+                        class="w-4 h-4 accent-neutral-500 dark:accent-neutral-400 focus:ring-neutral-400"
                       />
                       <div>
                         <div class="font-medium text-surface-900 dark:text-neutral-100">Daily</div>
@@ -167,7 +164,7 @@
                         type="radio"
                         v-model="form.runMode"
                         value="one-time"
-                        class="w-4 h-4 text-amber-500 focus:ring-amber-300"
+                        class="w-4 h-4 accent-neutral-500 dark:accent-neutral-400 focus:ring-neutral-400"
                       />
                       <div>
                         <div class="font-medium text-surface-900 dark:text-neutral-100">One-Time</div>
@@ -213,7 +210,7 @@
                     required
                   />
                   <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                    Time when the monitor runs automatically each day (timezone: server's DEFAULT_TIMEZONE).
+                    Time when the monitor runs automatically each day.
                   </p>
                 </div>
 

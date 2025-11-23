@@ -1,0 +1,130 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    Int             @id @default(autoincrement())
+  email                 String          @unique
+  passwordHash          String
+  displayName           String?
+  timezone              String          @default("Europe/Stockholm")
+  hideBusReplacedTrains Boolean         @default(false)
+  isAdmin               Boolean         @default(false)
+  isActive              Boolean         @default(true)
+  lastLoginAt           DateTime?
+  createdAt             DateTime        @default(now())
+  monitors              Monitor[]
+  searchHistory         SearchHistory[]
+  createdInviteCodes    InviteCode[]    @relation("CreatedInvites")
+  usedInviteCode        InviteCode?     @relation("UsedInvites", fields: [usedInviteCodeId], references: [id])
+  usedInviteCodeId      Int?
+  passwordResets        PasswordReset[]
+}
+
+model Monitor {
+  id                  Int             @id @default(autoincrement())
+  userId              Int
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  stationSignature    String          // Origin station
+  stationName         String          // Origin station name
+  destSignature       String?         // Destination station (optional, for route monitoring)
+  destName            String?         // Destination station name
+  scheduleTime        String?         // HH:mm format - only used for 'daily' mode
+  runMode             String          @default("daily") // 'daily' or 'one-time'
+  scheduleDate        String?         // YYYY-MM-DD format - start date for 'one-time' mode
+  scheduleEndDate     String?         // YYYY-MM-DD format - end date for 'one-time' mode (optional, defaults to scheduleDate)
+  timezone            String          // IANA timezone
+  delayThreshold      Int             @default(20)
+  discordWebhookUrl   String?
+  active              Boolean         @default(true)
+  lastRunAt           DateTime?
+  lastRunStatus       String?         // 'success', 'failed', 'running'
+  lastRunResultCount  Int?            // Number of delays found in last run
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  searchHistory       SearchHistory[]
+
+  @@index([userId])
+  @@index([active])
+}
+
+model InviteCode {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  createdBy   Int
+  creator     User      @relation("CreatedInvites", fields: [createdBy], references: [id], onDelete: Cascade)
+  expiresAt   DateTime?
+  usedBy      User[]    @relation("UsedInvites")
+  usedAt      DateTime?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([code])
+  @@index([active])
+}
+
+model Station {
+  signature       String   @id
+  advertisedName  String
+  shortName       String?
+  cachedAt        DateTime @default(now())
+}
+
+model ReasonCode {
+  code              String   @id
+  level1Description String?
+  level2Description String?
+  level3Description String?
+  cachedAt          DateTime @default(now())
+}
+
+model SearchHistory {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monitorId        Int?
+  monitor          Monitor? @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  searchType       String   // 'auto' or 'manual'
+
+  // Search parameters
+  stationSignature String
+  stationName      String
+  destSignature    String?
+  destName         String?
+  startDate        String
+  endDate          String
+  delayThreshold   Int
+
+  // Results
+  results          String   // JSON string of delay objects array
+  resultCount      Int
+  success          Boolean  @default(true)
+  errorMessage     String?
+
+  createdAt        DateTime @default(now())
+
+  @@index([userId, searchType])
+  @@index([monitorId])
+  @@index([createdAt])
+}
+
+model PasswordReset {
+  id          String    @id @default(uuid())
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
