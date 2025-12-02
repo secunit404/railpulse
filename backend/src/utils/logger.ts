@@ -6,11 +6,12 @@ import fs from 'fs';
 const logLevel = process.env.LOG_LEVEL || 'info';
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Resolve project root (go up from backend/src/utils/ or backend/dist/utils/)
-// In dev: __dirname = backend/src/utils -> go up 3 levels
-// In prod: __dirname = backend/dist/utils -> go up 3 levels
-const projectRoot = path.resolve(__dirname, '../../../');
-const logDir = path.join(projectRoot, 'data', 'logs');
+// Resolve log directory
+// In production (Docker): use /app/data/logs
+// In development: resolve from backend/src/utils/ or backend/dist/utils/
+const logDir = isProduction
+  ? '/app/data/logs'
+  : path.join(path.resolve(__dirname, '../../../'), 'data', 'logs');
 
 // Ensure log directory exists to prevent transport errors on startup
 if (!fs.existsSync(logDir)) {

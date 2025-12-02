@@ -14,7 +14,7 @@ services:
       retries: 3
       start_period: 40s
     environment:
-      - DATABASE_URL=${DATABASE_URL:-file:./data/railpulse.db}
+      - DATABASE_URL=${DATABASE_URL:-file:/app/data/railpulse.db}
       - JWT_SECRET=${JWT_SECRET}
       - TRAFIKVERKET_API_KEY=${TRAFIKVERKET_API_KEY}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}

@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Ensure data directory exists
+mkdir -p /app/data/logs
+
 echo "Running database migrations..."
 npx prisma migrate deploy
 
