@@ -6,7 +6,7 @@ Monitor Swedish train delays and get real-time notifications. Track your favorit
 
 - **Real-time Train Monitoring** - Track train delays and disruptions from Trafikverket's API
 - **Custom Route Alerts** - Set up notifications for specific train routes and stations
-- **Multi-channel Notifications** - Receive alerts via email (SMTP support)
+- **Discord Integration** - Receive alerts via Discord webhooks
 - **User Management** - Role-based access with admin controls and secure authentication
 - **Password Reset System** - Self-service or admin-assisted password recovery
 - **RESTful API** - Complete API for integration with other tools
@@ -31,7 +31,7 @@ services:
     image: ghcr.io/secunit404/railpulse:latest
     container_name: railpulse
     environment:
-      - DATABASE_URL=file:./data/railpulse.db
+      - DATABASE_URL=file:/app/data/railpulse.db
       - JWT_SECRET=your-secret-key-change-me
       - TRAFIKVERKET_API_KEY=your-api-key-here
       - FRONTEND_URL=http://localhost:9876
@@ -157,11 +157,12 @@ Stop with Ctrl+C
 | `DATABASE_URL` | SQLite database path | `file:./data/railpulse.db` |
 | `TZ` | Timezone for the application | `Europe/Stockholm` |
 | `LOG_LEVEL` | Logging verbosity (error, warn, info, debug) | `info` |
+| `NODE_ENV` | Node environment (development, production) | `development` |
 | `PUID` | User ID for file permissions | `1000` |
 | `PGID` | Group ID for file permissions | `1000` |
 | `DATA_DIR` | Data directory path (for development) | `./data` |
 
-Use `FRONTEND_URL=http://localhost:9876` when the bundled frontend is served by the container, and `FRONTEND_URL=http://localhost:5173` when running the Vite dev server (the default in `.env.example`).
+Set `FRONTEND_URL=http://localhost:9876` for production use (bundled frontend served by the container, as shown in `.env.example`). For development with the Vite dev server, use `FRONTEND_URL=http://localhost:5173`.
 
 ### SMTP Configuration (Optional)
 
@@ -174,6 +175,17 @@ For email notifications and password reset functionality:
 | `SMTP_USER` | SMTP username | `your-email@gmail.com` |
 | `SMTP_PASS` | SMTP password | `your-app-password` |
 | `SMTP_FROM` | From address for emails | `"RailPulse <no-reply@example.com>"` |
+
+### Discord Notifications (Optional)
+
+Discord webhook notifications are configured per-monitor through the web interface:
+
+1. Create a webhook in your Discord server (Server Settings → Integrations → Webhooks)
+2. Copy the webhook URL (e.g., `https://discord.com/api/webhooks/...`)
+3. When creating or editing a monitor, paste the webhook URL in the "Discord Webhook" field
+4. Delays detected by that monitor will be posted to your Discord channel with detailed information
+
+Each monitor can have its own Discord webhook, allowing you to route different train routes to different channels.
 
 ### Admin password resets without SMTP
 - Admins can generate a reset token/link without SMTP via `POST /api/auth/admin/reset-password` (requires an authenticated admin session).

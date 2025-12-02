@@ -17,7 +17,7 @@ services:
       - DATABASE_URL=${DATABASE_URL:-file:/app/data/railpulse.db}
       - JWT_SECRET=${JWT_SECRET}
       - TRAFIKVERKET_API_KEY=${TRAFIKVERKET_API_KEY}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:9876}
       - PORT=${PORT:-9876}
       - TZ=${TZ:-Europe/Stockholm}
       - LOG_LEVEL=${LOG_LEVEL:-info}
