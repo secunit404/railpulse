@@ -75,8 +75,9 @@ COPY shared /shared
 COPY backend/entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
-# Create data directory
-RUN mkdir -p /app/data/logs
+# Create data directory with proper permissions for any user
+RUN mkdir -p /app/data/logs && \
+    chmod -R 777 /app/data
 
 # Set production mode
 ENV NODE_ENV=production
