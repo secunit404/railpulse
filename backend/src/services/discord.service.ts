@@ -1,7 +1,11 @@
 import axios from 'axios';
 import dayjs from 'dayjs';
+import 'dayjs/locale/sv';
 import type { StationDelay } from '@shared/types';
 import logger from '../utils/logger';
+
+// Set Swedish locale globally for dayjs in this service
+dayjs.locale('sv');
 
 interface DiscordEmbed {
   title: string;
@@ -19,8 +23,9 @@ export class DiscordService {
   async postDelays(
     webhookUrl: string,
     monitorName: string,
-    date: Date,
-    delays: StationDelay[]
+    startDate: string | Date,
+    delays: StationDelay[],
+    endDate?: string | Date
   ): Promise<{ success: boolean; error?: string }> {
     try {
       logger.info(`Posting ${delays.length} delays to Discord for monitor: ${monitorName}`);
@@ -30,15 +35,10 @@ export class DiscordService {
         return { success: true };
       }
 
-      // Create base embed
-      const dateStr = dayjs(date).format('YYYY-MM-DD');
-      const journey = delays[0]?.journey || monitorName;
-
-      const title = `${monitorName} - ${dateStr}`;
-      const description = `**${journey}**\n\nFound ${delays.length} delay${delays.length > 1 ? 's' : ''}`;
+      const title = monitorName;
 
       // Create embeds with individual delay fields
-      const embeds = this.buildDelayEmbeds(title, description, delays);
+      const embeds = this.buildDelayEmbeds(title, delays);
 
       // Post to Discord with retry logic
       for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
@@ -77,25 +77,62 @@ export class DiscordService {
 
   private buildDelayEmbeds(
     title: string,
-    description: string,
     delays: StationDelay[]
   ): DiscordEmbed[] {
     const embeds: DiscordEmbed[] = [];
     const maxFieldsPerEmbed = 25; // Discord limit
 
-    // Group delays into embeds (max 25 fields per embed)
-    for (let i = 0; i < delays.length; i += maxFieldsPerEmbed) {
-      const delayBatch = delays.slice(i, i + maxFieldsPerEmbed);
+    // Calculate max delay for color
+    const maxDelay = Math.max(...delays.map(d => d.delayMinutes));
+
+    // Group delays by date
+    const delaysByDate = new Map<string, StationDelay[]>();
+    delays.forEach(delay => {
+      const date = dayjs(delay.departurePlanned).format('YYYY-MM-DD');
+      if (!delaysByDate.has(date)) {
+        delaysByDate.set(date, []);
+      }
+      delaysByDate.get(date)!.push(delay);
+    });
+
+    // Sort dates
+    const sortedDates = Array.from(delaysByDate.keys()).sort();
+
+    // Build fields with date headers
+    const allFields: Array<{ name: string; value: string; inline: boolean }> = [];
+    sortedDates.forEach(date => {
+      const dateDelays = delaysByDate.get(date)!;
+      // Capitalize first letter of weekday
+      const formattedDate = dayjs(date).format('dddd D MMMM YYYY');
+      const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+
+      // Add date header as a field
+      allFields.push({
+        name: `${capitalizedDate}`,
+        value: `${dateDelays.length} försening${dateDelays.length > 1 ? 'ar' : ''}`,
+        inline: false,
+      });
+
+      // Add all delays for this date
+      dateDelays.forEach(delay => {
+        allFields.push(this.formatDelayField(delay));
+      });
+    });
+
+    // Split fields into embeds (max 25 fields per embed)
+    for (let i = 0; i < allFields.length; i += maxFieldsPerEmbed) {
+      const fieldBatch = allFields.slice(i, i + maxFieldsPerEmbed);
       const isFirstEmbed = i === 0;
       const embedNumber = Math.floor(i / maxFieldsPerEmbed) + 1;
-      const totalEmbeds = Math.ceil(delays.length / maxFieldsPerEmbed);
+      const totalEmbeds = Math.ceil(allFields.length / maxFieldsPerEmbed);
 
       const embed: DiscordEmbed = {
-        title: isFirstEmbed ? title : `${title} (${embedNumber}/${totalEmbeds})`,
-        description: isFirstEmbed ? description : undefined,
-        color: 0xe74c3c, // Red color for delays
-        fields: delayBatch.map((delay) => this.formatDelayField(delay)),
+        title: isFirstEmbed ? `🚆 ${title}` : `🚆 ${title} (${embedNumber}/${totalEmbeds})`,
+        description: undefined,
+        color: this.getDelayColor(maxDelay),
+        fields: fieldBatch,
         timestamp: new Date().toISOString(),
+        footer: isFirstEmbed ? { text: '🔔 RailPulse Monitor Alert' } : undefined,
       };
 
       embeds.push(embed);
@@ -104,12 +141,20 @@ export class DiscordService {
     return embeds;
   }
 
-  private formatDelayField(delay: StationDelay): { name: string; value: string; inline: boolean } {
-    const name = `${delay.trainCompany} ${delay.trainNumber} | +${delay.delayMinutes} min`;
+  private getDelayColor(maxDelay: number): number {
+    // Color gradient based on severity
+    if (maxDelay >= 60) return 0x8b0000; // Dark red for 60+ min
+    if (maxDelay >= 40) return 0xe74c3c; // Red for 40-59 min
+    if (maxDelay >= 20) return 0xe67e22; // Orange for 20-39 min
+    return 0x95a5a6; // Gray for <20 min
+  }
 
-    const departureInfo = `Departure: ${this.formatTime(delay.departurePlanned)} → ${this.formatTime(delay.departureActual)}\n`;
-    const arrivalInfo = `Arrival: ${this.formatTime(delay.arrivalPlanned)} → ${this.formatTime(delay.arrivalActual)}\n`;
-    const reasonInfo = delay.delayReason ? `Reason: ${delay.delayReason}` : '';
+  private formatDelayField(delay: StationDelay): { name: string; value: string; inline: boolean } {
+    const name = `${delay.trainCompany} ${delay.trainNumber} │ +${delay.delayMinutes} min`;
+
+    const departureInfo = `**Avgång:** \`${this.formatTime(delay.departurePlanned)}\` → \`${this.formatTime(delay.departureActual)}\`\n`;
+    const arrivalInfo = `**Ankomst:** \`${this.formatTime(delay.arrivalPlanned)}\` → \`${this.formatTime(delay.arrivalActual)}\`\n`;
+    const reasonInfo = delay.delayReason ? `**Orsak:** ${delay.delayReason}` : '';
 
     const value = departureInfo + arrivalInfo + reasonInfo;
 

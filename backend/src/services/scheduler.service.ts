@@ -188,8 +188,9 @@ export class SchedulerService {
         const result = await this.discordService.postDelays(
           monitor.discordWebhookUrl,
           monitor.name,
-          new Date(),
-          delays
+          startDate,
+          delays,
+          endDate
         );
 
         if (!result.success) {
@@ -413,8 +414,9 @@ export class SchedulerService {
         const result = await this.discordService.postDelays(
           monitor.discordWebhookUrl,
           monitor.name,
-          new Date(),
-          delays
+          startDate,
+          delays,
+          endDate
         );
 
         if (!result.success) {
