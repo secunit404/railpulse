@@ -21,6 +21,8 @@ services:
       - PORT=${PORT:-9876}
       - TZ=${TZ:-Europe/Stockholm}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      - COOKIE_SAMESITE=${COOKIE_SAMESITE:-lax}
     volumes:
       - ${DATA_DIR:-./data}:/app/data
     restart: unless-stopped
