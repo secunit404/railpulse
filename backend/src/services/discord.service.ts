@@ -35,10 +35,11 @@ export class DiscordService {
         return { success: true };
       }
 
+      const journey = delays[0]?.journey || monitorName;
       const title = monitorName;
 
       // Create embeds with individual delay fields
-      const embeds = this.buildDelayEmbeds(title, delays);
+      const embeds = this.buildDelayEmbeds(title, journey, delays);
 
       // Post to Discord with retry logic
       for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
@@ -77,6 +78,7 @@ export class DiscordService {
 
   private buildDelayEmbeds(
     title: string,
+    journey: string,
     delays: StationDelay[]
   ): DiscordEmbed[] {
     const embeds: DiscordEmbed[] = [];
@@ -109,7 +111,7 @@ export class DiscordService {
       // Add date header as a field
       allFields.push({
         name: `${capitalizedDate}`,
-        value: `${dateDelays.length} försening${dateDelays.length > 1 ? 'ar' : ''}`,
+        value: `${dateDelays.length} försening${dateDelays.length > 1 ? 'ar' : ''}\n───────────────────────────`,
         inline: false,
       });
 
@@ -128,7 +130,7 @@ export class DiscordService {
 
       const embed: DiscordEmbed = {
         title: isFirstEmbed ? `🚆 ${title}` : `🚆 ${title} (${embedNumber}/${totalEmbeds})`,
-        description: undefined,
+        description: isFirstEmbed ? `**${journey}**` : undefined,
         color: this.getDelayColor(maxDelay),
         fields: fieldBatch,
         timestamp: new Date().toISOString(),
