@@ -406,6 +406,22 @@ export class SchedulerService {
         logger.info(`Monitor ${monitor.id}: Filtered bus-replaced trains for user preference`);
       }
 
+      logger.info(`Found ${delays.length} delays for monitor ${monitor.name}`);
+
+      // Post to Discord if webhook configured
+      if (monitor.discordWebhookUrl && delays.length > 0) {
+        const result = await this.discordService.postDelays(
+          monitor.discordWebhookUrl,
+          monitor.name,
+          new Date(),
+          delays
+        );
+
+        if (!result.success) {
+          logger.warn(`Discord posting failed for monitor ${monitor.id}: ${result.error}`);
+        }
+      }
+
       // Update status to success and save result count
       await this.prisma.monitor.update({
         where: { id: monitor.id },
