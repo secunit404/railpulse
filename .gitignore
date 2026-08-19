@@ -31,3 +31,8 @@ logs/
 *.sqlite
 *.db
 *.db-journal
+
+# shared/ holds a hand-maintained declaration file - nothing is emitted there
+shared/*.js
+shared/*.js.map
+shared/*.d.ts.map
