@@ -54,6 +54,7 @@ export interface StationDelay {
   arrivalActual: string; // ISO string
   delayReason: string;
   alternativeInfo?: string; // Info about taking alternative train
+  isBusReplacement?: boolean; // Journey was operated by a replacement bus
 }
 
 export interface Station {

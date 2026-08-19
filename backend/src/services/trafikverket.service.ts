@@ -28,6 +28,8 @@ interface TrainAnnouncement {
   Deviation?: Array<{ Code: string; Description: string }>;
   ProductInformation?: Array<{ Code?: string; Description: string }>;
   OtherInformation?: Array<{ Code?: string; Description: string }>;
+  /** Schema 2.0: "Tåg", "Pendeltåg" or "Buss" for replacement bus services. */
+  TypeOfTraffic?: Array<{ Code?: string; Description: string }>;
   TrackAtLocation?: string;
 }
 
@@ -61,6 +63,7 @@ const TRAIN_ANNOUNCEMENT_INCLUDES = [
   'ToLocation',
   'ProductInformation',
   'OtherInformation',
+  'TypeOfTraffic',
 ];
 
 /**
@@ -79,6 +82,41 @@ function buildTrainGroupKey(ann: TrainAnnouncement): string {
 
   const serviceDate = dayjs(ann.AdvertisedTimeAtLocation).format('YYYY-MM-DD');
   return `${ann.AdvertisedTrainIdent}-${ann.OperationalTrainNumber || 'unknown'}-${serviceDate}`;
+}
+
+/** Deviation code for "Buss ersätter": a bus replaces the train on this leg. */
+const BUS_REPLACEMENT_DEVIATION_CODE = 'ANA007';
+const BUS_REPLACEMENT_DEVIATION_TEXT = 'buss ersätter';
+const BUS_TRAFFIC_TYPE = 'buss';
+
+/**
+ * Detects whether a journey was replaced by a bus.
+ *
+ * Matches on the deviation code rather than the Swedish description, and reads
+ * the raw announcements instead of the formatted reason string. The reason
+ * string only keeps the highest-priority deviations, so a train carrying both
+ * "Buss ersätter" and a higher-priority deviation (a vehicle fault, say) loses
+ * the bus text entirely - which text matching on that string cannot see.
+ *
+ * Note: replacement bus services (TypeOfTraffic "Buss") are published without
+ * actual or estimated times, so they never survive the delay calculation. The
+ * traffic-type check is defensive, for if that ever changes. The text check is
+ * a fallback in case a deviation carries the wording without the code.
+ */
+function detectBusReplacement(group: TrainAnnouncement[], delayReason: string): boolean {
+  const replacedByBus = group.some((ann) =>
+    ann.Deviation?.some((dev) => dev.Code === BUS_REPLACEMENT_DEVIATION_CODE)
+  );
+
+  const announcedAsBus = group.some((ann) =>
+    ann.TypeOfTraffic?.some((type) => type.Description?.toLowerCase() === BUS_TRAFFIC_TYPE)
+  );
+
+  return (
+    replacedByBus ||
+    announcedAsBus ||
+    delayReason.toLowerCase().includes(BUS_REPLACEMENT_DEVIATION_TEXT)
+  );
 }
 
 // Helper function to extract train company from ProductInformation
@@ -476,19 +514,29 @@ export class TrafikverketService {
         const departures = group.filter((a) => a.ActivityType === 'Avgang');
         const arrivals = group.filter((a) => a.ActivityType === 'Ankomst');
 
-        if (departures.length === 0 || arrivals.length === 0) continue;
+        if (departures.length === 0 && arrivals.length === 0) continue;
 
-        const departure = departures.sort(
+        const earliestDeparture: TrainAnnouncement | undefined = departures.sort(
           (a, b) =>
             dayjs(a.AdvertisedTimeAtLocation).valueOf() -
             dayjs(b.AdvertisedTimeAtLocation).valueOf()
         )[0];
 
-        const arrival = arrivals.sort(
+        const latestArrival: TrainAnnouncement | undefined = arrivals.sort(
           (a, b) =>
             dayjs(b.AdvertisedTimeAtLocation).valueOf() -
             dayjs(a.AdvertisedTimeAtLocation).valueOf()
         )[0];
+
+        // A terminus produces only one leg per train: a terminating train has no
+        // departure and an originating train has no arrival. Fall back to whichever
+        // leg exists so those trains are reported instead of silently skipped.
+        // Delay is still measured at `arrival`, which for an originating train is
+        // its departure from this station.
+        const departure = earliestDeparture ?? latestArrival;
+        const arrival = latestArrival ?? earliestDeparture;
+
+        if (!departure || !arrival) continue;
 
         // Skip fast trains (ending with 'x') - not part of Västtrafik
         if (departure.AdvertisedTrainIdent.toLowerCase().endsWith('x')) {
@@ -613,6 +661,7 @@ export class TrafikverketService {
           arrivalPlanned: arrival.AdvertisedTimeAtLocation,
           arrivalActual: actualArrivalTime,
           delayReason,
+          isBusReplacement: detectBusReplacement(group, delayReason),
         });
       }
 
@@ -926,6 +975,7 @@ export class TrafikverketService {
           arrivalActual: earliestActualArrival.toISOString(),
           delayReason,
           alternativeInfo,
+          isBusReplacement: detectBusReplacement(train.group, delayReason),
         });
       }
 

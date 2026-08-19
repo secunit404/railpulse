@@ -177,7 +177,7 @@ export class SchedulerService {
 
       // Filter out bus-replaced trains if user preference is set
       if (user?.hideBusReplacedTrains) {
-        delays = delays.filter(delay => !delay.delayReason.toLowerCase().includes('buss ersätter'));
+        delays = delays.filter(delay => !delay.isBusReplacement);
         logger.info(`Monitor ${monitor.id}: Filtered bus-replaced trains for user preference`);
       }
 
@@ -403,7 +403,7 @@ export class SchedulerService {
 
       // Filter out bus-replaced trains if user preference is set
       if (user?.hideBusReplacedTrains) {
-        delays = delays.filter(delay => !delay.delayReason.toLowerCase().includes('buss ersätter'));
+        delays = delays.filter(delay => !delay.isBusReplacement);
         logger.info(`Monitor ${monitor.id}: Filtered bus-replaced trains for user preference`);
       }
 

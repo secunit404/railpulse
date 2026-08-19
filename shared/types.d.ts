@@ -34,6 +34,7 @@ export interface StationDelay {
     arrivalActual: string;
     delayReason: string;
     alternativeInfo?: string;
+    isBusReplacement?: boolean;
     replacementBus?: {
         trainNumber: string;
         departureTime: string;

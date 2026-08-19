@@ -60,9 +60,9 @@ router.post(
       if (user?.hideBusReplacedTrains) {
         const beforeCount = delays.length;
         delays = delays.filter(delay => {
-          const shouldKeep = !delay.delayReason.toLowerCase().includes('buss ersätter');
+          const shouldKeep = !delay.isBusReplacement;
           if (!shouldKeep) {
-            logger.debug(`Filtering out train ${delay.trainNumber} with reason: ${delay.delayReason}`);
+            logger.debug(`Filtering out bus-replaced train ${delay.trainNumber} with reason: ${delay.delayReason}`);
           }
           return shouldKeep;
         });
