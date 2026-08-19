@@ -13,9 +13,21 @@ const logDir = isProduction
   ? '/app/data/logs'
   : path.join(path.resolve(__dirname, '../../../'), 'data', 'logs');
 
-// Ensure log directory exists to prevent transport errors on startup
-if (!fs.existsSync(logDir)) {
+// Ensure log directory exists to prevent transport errors on startup. A
+// permission failure here must not take the process down: the container falls
+// back to console-only logging so the operator can still read the reason.
+let fileLoggingAvailable = true;
+try {
   fs.mkdirSync(logDir, { recursive: true });
+  fs.accessSync(logDir, fs.constants.W_OK);
+} catch (error) {
+  fileLoggingAvailable = false;
+  const reason = error instanceof Error ? error.message : String(error);
+  console.error(
+    `Log directory "${logDir}" is not writable (${reason}). ` +
+      'Falling back to console logging. Check that the mounted data directory ' +
+      'is owned by the PUID:PGID the container runs as.'
+  );
 }
 
 // Define log format
@@ -39,61 +51,61 @@ const consoleFormat = winston.format.combine(
   })
 );
 
-// File rotation transport
-const fileRotateTransport = new DailyRotateFile({
-  filename: path.join(logDir, 'app-%DATE%.log'),
-  datePattern: 'YYYY-MM-DD',
-  maxSize: '20m',
-  maxFiles: '14d',
-  format: logFormat,
-});
-
-// Error log rotation
-const errorRotateTransport = new DailyRotateFile({
-  filename: path.join(logDir, 'error-%DATE%.log'),
-  datePattern: 'YYYY-MM-DD',
-  maxSize: '20m',
-  maxFiles: '30d',
-  level: 'error',
-  format: logFormat,
-});
+// Rotating file transports, built only when the log directory is usable:
+// constructing them opens the target file straight away.
+const buildFileTransports = (): winston.transport[] => [
+  new DailyRotateFile({
+    filename: path.join(logDir, 'app-%DATE%.log'),
+    datePattern: 'YYYY-MM-DD',
+    maxSize: '20m',
+    maxFiles: '14d',
+    format: logFormat,
+  }),
+  new DailyRotateFile({
+    filename: path.join(logDir, 'error-%DATE%.log'),
+    datePattern: 'YYYY-MM-DD',
+    maxSize: '20m',
+    maxFiles: '30d',
+    level: 'error',
+    format: logFormat,
+  }),
+];
 
 // Create the logger
 export const logger = winston.createLogger({
   level: logLevel,
   format: logFormat,
-  transports: [
-    fileRotateTransport,
-    errorRotateTransport,
-  ],
+  transports: fileLoggingAvailable ? buildFileTransports() : [],
 });
 
-// Add console transport in development
-if (!isProduction) {
+// Console transport in development, and as the only sink when files are unusable
+if (!isProduction || !fileLoggingAvailable) {
   logger.add(
     new winston.transports.Console({
-      format: consoleFormat,
+      format: isProduction ? logFormat : consoleFormat,
     })
   );
 }
 
 // Handle uncaught exceptions and unhandled rejections
-logger.exceptions.handle(
-  new DailyRotateFile({
-    filename: path.join(logDir, 'exceptions-%DATE%.log'),
-    datePattern: 'YYYY-MM-DD',
-    maxSize: '20m',
-    maxFiles: '30d',
-  })
-);
+if (fileLoggingAvailable) {
+  logger.exceptions.handle(
+    new DailyRotateFile({
+      filename: path.join(logDir, 'exceptions-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '30d',
+    })
+  );
 
-logger.rejections.handle(
-  new DailyRotateFile({
-    filename: path.join(logDir, 'rejections-%DATE%.log'),
-    datePattern: 'YYYY-MM-DD',
-    maxSize: '20m',
-    maxFiles: '30d',
-  })
-);
+  logger.rejections.handle(
+    new DailyRotateFile({
+      filename: path.join(logDir, 'rejections-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '30d',
+    })
+  );
+}
 
 export default logger;

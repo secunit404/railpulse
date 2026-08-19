@@ -37,6 +37,9 @@ services:
       - FRONTEND_URL=http://localhost:9876
       - PORT=9876
       - TZ=Europe/Stockholm
+      # File ownership on the data volume - match your host user (`id -u`, `id -g`)
+      - PUID=1000
+      - PGID=1000
       # Optional: Enable email notifications
       # - SMTP_HOST=smtp.example.com
       # - SMTP_PORT=465
@@ -48,7 +51,6 @@ services:
     ports:
       - "9876:9876"
     restart: unless-stopped
-    user: "1000:1000"  # Adjust PUID:PGID as needed
 ```
 
 2. Get your Trafikverket API key from [https://api.trafikinfo.trafikverket.se/](https://api.trafikinfo.trafikverket.se/)
@@ -206,7 +208,31 @@ volumes:
   - ./data:/app/data  # Mount host ./data directory to container /app/data
 ```
 
-⚠️ **Important**: The container runs as user `1000:1000` by default. Ensure your `./data` directory has appropriate permissions, or adjust `PUID` and `PGID` environment variables to match your host user.
+### File ownership (PUID / PGID)
+
+Docker creates a missing bind-mount directory on the host as `root:root`, which
+would leave the database and logs unreadable by your host user. To avoid that,
+the container starts as root, takes ownership of `/app/data`, and then drops to
+the unprivileged user given by `PUID`/`PGID` before the application runs. The
+server process itself never runs as root.
+
+Set both to your own user (`id -u` and `id -g` on the host):
+
+```yaml
+environment:
+  - PUID=1000
+  - PGID=1000
+```
+
+⚠️ **Do not set a `user:` key in the compose file.** It prevents the container
+from fixing ownership of the mounted directory, which is the usual cause of
+`could not create logs dir` errors. If you must pin the user for policy reasons,
+take ownership on the host first:
+
+```bash
+sudo mkdir -p /opt/appdata/railpulse
+sudo chown -R 1000:1000 /opt/appdata/railpulse
+```
 
 ## Updates
 
@@ -265,7 +291,7 @@ docker compose logs -f railpulse
 
 Common issues:
 - **Missing environment variables**: Ensure `JWT_SECRET` and `TRAFIKVERKET_API_KEY` are set
-- **Permission denied on /app/data**: Check that PUID/PGID match your host user or adjust permissions on the `./data` directory
+- **Permission denied on /app/data / could not create logs dir**: Remove any `user:` key from your compose file and set `PUID`/`PGID` instead - see [File ownership (PUID / PGID)](#file-ownership-puid--pgid). If the directory was already created by an earlier run as root, the container reclaims it automatically on the next start.
 - **API key invalid**: Verify your Trafikverket API key is active at [https://api.trafikinfo.trafikverket.se/](https://api.trafikinfo.trafikverket.se/)
 
 ### Development Server Port Conflicts

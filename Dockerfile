@@ -56,8 +56,8 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Install OpenSSL (required by Prisma at runtime)
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# OpenSSL is required by Prisma at runtime; gosu drops privileges in the entrypoint
+RUN apt-get update && apt-get install -y openssl gosu && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY backend/package*.json ./
@@ -75,12 +75,16 @@ COPY shared /shared
 COPY backend/entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
-# Create data directory with proper permissions for any user
+# Fallback data directory for runs without a mounted volume. When a volume is
+# mounted it shadows this, and the entrypoint claims it for PUID:PGID instead.
 RUN mkdir -p /app/data/logs && \
-    chmod -R 777 /app/data
+    chown -R node:node /app/data
 
-# Set production mode
-ENV NODE_ENV=production
+# The image starts as root so the entrypoint can chown the mounted volume, then
+# drops to the PUID:PGID user. HOME must point at a directory that user owns,
+# otherwise Prisma and npm fall back to root's home and fail to write.
+ENV NODE_ENV=production \
+    HOME=/home/node
 
 EXPOSE 9876
 
