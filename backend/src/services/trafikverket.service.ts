@@ -33,6 +33,12 @@ interface TrainAnnouncement {
   TrackAtLocation?: string;
 }
 
+interface TrainStation {
+  LocationSignature: string;
+  AdvertisedLocationName: string;
+  AdvertisedShortLocationName?: string;
+}
+
 
 interface ReasonCodePriority {
   code: string;
@@ -243,12 +249,21 @@ export class TrafikverketService {
 
         const xml = this.buildXmlQuery('TrainStation', '1.4', '<EQ name="Advertised" value="true" />');
         
-        const stations = await this.queryApi<any>('TrainStation', xml);
+        const stations = await this.queryApi<TrainStation>('TrainStation', xml);
+
+        // An empty upstream response must never replace a usable station cache.
+        // Trafikverket can occasionally return a successful response without
+        // object data, which is not the same thing as there being no stations.
+        if (stations.length === 0) {
+          throw new Error(
+            'Trafikverket returned no advertised stations; preserving the existing station cache'
+          );
+        }
 
         await this.prisma.$transaction(async (tx) => {
           await tx.station.deleteMany({});
           await tx.station.createMany({
-            data: stations.map((s: any) => ({
+            data: stations.map((s) => ({
               signature: s.LocationSignature,
               advertisedName: s.AdvertisedLocationName,
               shortName: s.AdvertisedShortLocationName || null,

@@ -13,7 +13,7 @@ export function setTrafikverketService(service: TrafikverketService) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const stations = await prisma.station.findMany({
+    const findStations = () => prisma.station.findMany({
       select: {
         signature: true,
         advertisedName: true,
@@ -23,6 +23,16 @@ router.get('/', async (req, res, next) => {
         advertisedName: 'asc',
       },
     });
+
+    let stations = await findStations();
+
+    // Recover automatically if a previous refresh left the cache empty. This
+    // also gives a startup sync that hit a transient upstream failure another
+    // chance when the picker is opened.
+    if (stations.length === 0 && trafikverketService) {
+      await trafikverketService.syncStations();
+      stations = await findStations();
+    }
 
     res.json({ stations });
   } catch (error) {

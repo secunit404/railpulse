@@ -411,7 +411,15 @@ function populateFromMonitor(monitor: Monitor) {
 
 async function prepareForm() {
   if (!stationStore.loaded) {
-    await stationStore.fetchStations();
+    try {
+      await stationStore.fetchStations();
+    } catch (error) {
+      notify({
+        title: 'Stations Unavailable',
+        message: 'Could not load stations. Close and reopen the form to retry.',
+        type: 'error',
+      });
+    }
   }
 
   if (activeMonitor.value) {
