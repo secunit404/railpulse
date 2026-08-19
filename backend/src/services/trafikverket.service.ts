@@ -12,6 +12,11 @@ dayjs.extend(timezone);
 interface TrainAnnouncement {
   AdvertisedTrainIdent: string;
   OperationalTrainNumber?: string;
+  /**
+   * Composite identifier introduced in schema 2.0, e.g. "1042-TR-3989-1042-20260819".
+   * Present on all train traffic; absent on replacement bus services.
+   */
+  AdvertisedTrainReference?: string;
   ActivityType: string;
   AdvertisedTimeAtLocation: string;
   TimeAtLocation?: string;
@@ -31,6 +36,49 @@ interface ReasonCodePriority {
   code: string;
   priority: number;
   description: string;
+}
+
+/**
+ * TrainAnnouncement moved to its own namespace, mandatory from 2026-09-02.
+ * Schema 2.0 is only reachable when the namespace is supplied.
+ * See https://data.trafikverket.se/news/changes-in-trainannouncement
+ */
+const TRAIN_ANNOUNCEMENT_NAMESPACE = 'rail.trafficinfo';
+const TRAIN_ANNOUNCEMENT_SCHEMA_VERSION = '2.0';
+
+const TRAIN_ANNOUNCEMENT_INCLUDES = [
+  'AdvertisedTrainIdent',
+  'OperationalTrainNumber',
+  'AdvertisedTrainReference',
+  'ActivityType',
+  'AdvertisedTimeAtLocation',
+  'TimeAtLocation',
+  'EstimatedTimeAtLocation',
+  'LocationSignature',
+  'Canceled',
+  'Deviation',
+  'FromLocation',
+  'ToLocation',
+  'ProductInformation',
+  'OtherInformation',
+];
+
+/**
+ * Builds the key used to group announcements belonging to the same journey.
+ *
+ * Schema 2.0 provides AdvertisedTrainReference, which stays stable across a
+ * journey even when OperationalTrainNumber changes mid-route (trains crossing
+ * midnight get renumbered, which split them into two groups under the old key).
+ * Replacement bus services carry no reference, so they keep the previous
+ * train number + service date key.
+ */
+function buildTrainGroupKey(ann: TrainAnnouncement): string {
+  if (ann.AdvertisedTrainReference) {
+    return ann.AdvertisedTrainReference;
+  }
+
+  const serviceDate = dayjs(ann.AdvertisedTimeAtLocation).format('YYYY-MM-DD');
+  return `${ann.AdvertisedTrainIdent}-${ann.OperationalTrainNumber || 'unknown'}-${serviceDate}`;
 }
 
 // Helper function to extract train company from ProductInformation
@@ -59,15 +107,18 @@ export class TrafikverketService {
     objectType: string,
     schemaVersion: string,
     filters: string,
-    includes?: string[]
+    includes?: string[],
+    namespace?: string
   ): string {
     const includeElements = includes
       ? includes.map((inc) => `<INCLUDE>${inc}</INCLUDE>`).join('')
       : '';
 
+    const namespaceAttribute = namespace ? ` namespace="${namespace}"` : '';
+
     return `<REQUEST>
   <LOGIN authenticationkey="${this.apiKey}"/>
-  <QUERY objecttype="${objectType}" schemaversion="${schemaVersion}">
+  <QUERY objecttype="${objectType}"${namespaceAttribute} schemaversion="${schemaVersion}">
     <FILTER>${filters}</FILTER>
     ${includeElements}
   </QUERY>
@@ -371,24 +422,14 @@ export class TrafikverketService {
         </AND>
       `;
 
-      const includes = [
-        'AdvertisedTrainIdent',
-        'OperationalTrainNumber',
-        'ActivityType',
-        'AdvertisedTimeAtLocation',
-        'TimeAtLocation',
-        'EstimatedTimeAtLocation',
-        'LocationSignature',
-        'Canceled',
-        'Deviation',
-        'FromLocation',
-        'ToLocation',
-        'ProductInformation',
-        'OtherInformation',
-      ];
+      const xml = this.buildXmlQuery(
+        'TrainAnnouncement',
+        TRAIN_ANNOUNCEMENT_SCHEMA_VERSION,
+        filters,
+        TRAIN_ANNOUNCEMENT_INCLUDES,
+        TRAIN_ANNOUNCEMENT_NAMESPACE
+      );
 
-      const xml = this.buildXmlQuery('TrainAnnouncement', '1.9', filters, includes);
-      
       const announcements = await this.queryApi<TrainAnnouncement>('TrainAnnouncement', xml);
 
       logger.debug(`Received ${announcements.length} announcements`);
@@ -420,9 +461,8 @@ export class TrafikverketService {
       const trainGroups: { [key: string]: TrainAnnouncement[] } = {};
 
       for (const ann of announcements) {
-        const serviceDate = dayjs(ann.AdvertisedTimeAtLocation).format('YYYY-MM-DD');
-        const trainKey = `${ann.AdvertisedTrainIdent}-${ann.OperationalTrainNumber || 'unknown'}-${serviceDate}`;
-        
+        const trainKey = buildTrainGroupKey(ann);
+
         if (!trainGroups[trainKey]) {
           trainGroups[trainKey] = [];
         }
@@ -618,24 +658,14 @@ export class TrafikverketService {
         <EQ name="Advertised" value="true" />
       `;
 
-      const includes = [
-        'AdvertisedTrainIdent',
-        'OperationalTrainNumber',
-        'ActivityType',
-        'AdvertisedTimeAtLocation',
-        'TimeAtLocation',
-        'EstimatedTimeAtLocation',
-        'LocationSignature',
-        'Canceled',
-        'Deviation',
-        'FromLocation',
-        'ToLocation',
-        'ProductInformation',
-        'OtherInformation',
-      ];
+      const xml = this.buildXmlQuery(
+        'TrainAnnouncement',
+        TRAIN_ANNOUNCEMENT_SCHEMA_VERSION,
+        filters,
+        TRAIN_ANNOUNCEMENT_INCLUDES,
+        TRAIN_ANNOUNCEMENT_NAMESPACE
+      );
 
-      const xml = this.buildXmlQuery('TrainAnnouncement', '1.9', filters, includes);
-      
       const announcements = await this.queryApi<TrainAnnouncement>('TrainAnnouncement', xml);
 
       logger.debug(`Received ${announcements.length} announcements for route query`);
@@ -665,9 +695,8 @@ export class TrafikverketService {
       const trainGroups: { [key: string]: TrainAnnouncement[] } = {};
 
       for (const ann of announcements) {
-        const serviceDate = dayjs(ann.AdvertisedTimeAtLocation).format('YYYY-MM-DD');
-        const trainKey = `${ann.AdvertisedTrainIdent}-${ann.OperationalTrainNumber || 'unknown'}-${serviceDate}`;
-        
+        const trainKey = buildTrainGroupKey(ann);
+
         if (!trainGroups[trainKey]) {
           trainGroups[trainKey] = [];
         }
