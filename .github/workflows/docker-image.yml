@@ -54,3 +54,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # latest/main move on every push to main, stranding the multi-arch
+      # children of the previous manifest with nothing referencing them.
+      - name: Prune orphaned image versions
+        uses: dataaxiom/ghcr-cleanup-action@v1.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          delete-untagged: true
+          keep-n-tagged: 5
+          exclude-tags: latest
